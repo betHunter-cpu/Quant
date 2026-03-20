@@ -1,6 +1,6 @@
 import React from 'react';
 import { MatchData, BettingOdds } from '../services/basketballService';
-import { ForecastingEngine, SimulationResult, TeamMetrics } from '../services/forecastingEngine';
+import { SimulationResult, TeamMetrics } from '../types/forecasting';
 import { Activity, BarChart3, Target, Shield, Zap, TrendingUp, AlertCircle } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { cn } from '../utils/cn';
@@ -15,6 +15,7 @@ interface AnalysisPanelProps {
   statistics: any | null;
   calculateImpliedProb: (odd: number) => number;
   calculateEdge: (prob: number, odd: number) => number;
+  sport?: 'BASKETBALL' | 'ICE_HOCKEY';
 }
 
 function decimalToAmerican(decimal: number): string {
@@ -25,7 +26,10 @@ function decimalToAmerican(decimal: number): string {
   }
 }
 
-export function AnalysisPanel({ selectedMatch, simulating, forecast, odds, homeMetrics, awayMetrics, statistics, calculateImpliedProb, calculateEdge }: AnalysisPanelProps) {
+export function AnalysisPanel({ selectedMatch, simulating, forecast, odds, homeMetrics, awayMetrics, statistics, calculateImpliedProb, calculateEdge, sport = 'BASKETBALL' }: AnalysisPanelProps) {
+  const unit = sport === 'ICE_HOCKEY' ? 'goals' : 'pts';
+  const labelTotal = sport === 'ICE_HOCKEY' ? 'Goles Totales' : 'Puntos Totales';
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* 1. Logos and Names */}
@@ -98,7 +102,7 @@ export function AnalysisPanel({ selectedMatch, simulating, forecast, odds, homeM
 
         {/* Spread */}
         <div className="bg-[#1f1f1f] border border-white/5 rounded-2xl p-3 flex flex-col justify-between">
-          <h3 className="text-[11px] font-mono text-emerald-400 font-bold uppercase tracking-widest mb-1">Spread</h3>
+          <h3 className="text-[11px] font-mono text-emerald-400 font-bold uppercase tracking-widest mb-1">{sport === 'ICE_HOCKEY' ? 'Puck Line' : 'Spread'}</h3>
           {simulating ? <Skeleton /> : forecast ? (() => {
             const hasOdds = !!odds?.spread && forecast.coverProbHome !== undefined && forecast.coverProbAway !== undefined;
             const bookmakerLine = odds?.spread?.line || 0;
@@ -168,7 +172,7 @@ export function AnalysisPanel({ selectedMatch, simulating, forecast, odds, homeM
                     </div>
                   </div>
                   <p className="text-lg font-light text-white mb-0">
-                    <span className="text-emerald-500">{projectedTotal.toFixed(1)}</span> pts
+                    <span className="text-emerald-500">{projectedTotal.toFixed(1)}</span> {unit}
                   </p>
                   <p className="text-[9px] text-neutral-400 uppercase tracking-widest mb-2">Total Proyectado</p>
                 </div>
@@ -212,7 +216,7 @@ export function AnalysisPanel({ selectedMatch, simulating, forecast, odds, homeM
       {/* 5. Monte Carlo */}
       <div className="bg-[#141414] border border-white/5 rounded-2xl p-6">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xs font-mono text-neutral-500 uppercase tracking-widest">Distribución Monte Carlo (Totales)</h3>
+          <h3 className="text-xs font-mono text-neutral-500 uppercase tracking-widest">Distribución Monte Carlo ({labelTotal})</h3>
           <div className="flex items-center gap-2 text-xs text-neutral-500 font-mono"><AlertCircle className="w-3 h-3" /> N=10,000</div>
         </div>
         <div className="h-64 w-full">
@@ -227,7 +231,7 @@ export function AnalysisPanel({ selectedMatch, simulating, forecast, odds, homeM
                 </defs>
                 <XAxis dataKey="total" type="number" domain={['dataMin - 10', 'dataMax + 10']} tick={{ fill: '#525252', fontSize: 12, fontFamily: 'monospace' }} axisLine={false} tickLine={false} />
                 <YAxis hide />
-                <Tooltip contentStyle={{ backgroundColor: '#000', borderColor: '#333', borderRadius: '8px', fontFamily: 'monospace', fontSize: '12px' }} itemStyle={{ color: '#10b981' }} labelStyle={{ color: '#888' }} formatter={(value: number) => [value, 'Puntos Totales']} labelFormatter={(label) => `Simulación: ${label} pts`} />
+                <Tooltip contentStyle={{ backgroundColor: '#000', borderColor: '#333', borderRadius: '8px', fontFamily: 'monospace', fontSize: '12px' }} itemStyle={{ color: '#10b981' }} labelStyle={{ color: '#888' }} formatter={(value: number) => [value, labelTotal]} labelFormatter={(label) => `Simulación: ${label} ${unit}`} />
                 <Area type="monotone" dataKey="total" stroke="#10b981" fillOpacity={1} fill="url(#colorTotal)" />
                 <ReferenceLine x={forecast.expectedTotal} stroke="#fff" strokeDasharray="3 3" />
                 {odds?.totals?.line && <ReferenceLine x={odds.totals.line} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'top', value: 'Línea', fill: '#ef4444', fontSize: 10, fontFamily: 'monospace' }} />}
@@ -246,8 +250,8 @@ export function AnalysisPanel({ selectedMatch, simulating, forecast, odds, homeM
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <MetricRow label="Offensive Rtg" away={awayMetrics.offensiveRating} home={homeMetrics.offensiveRating} icon={<Target className="w-3 h-3" />} higherIsBetter />
             <MetricRow label="Defensive Rtg" away={awayMetrics.defensiveRating} home={homeMetrics.defensiveRating} icon={<Shield className="w-3 h-3" />} higherIsBetter={false} />
-            <MetricRow label="Pace (Ritmo)" away={awayMetrics.pace} home={homeMetrics.pace} icon={<Zap className="w-3 h-3" />} higherIsBetter={true} />
-            <MetricRow label="eFG%" away={awayMetrics.eFGPercentage} home={homeMetrics.eFGPercentage} icon={<TrendingUp className="w-3 h-3" />} higherIsBetter />
+            <MetricRow label={sport === 'ICE_HOCKEY' ? 'Shots PG' : 'Pace (Ritmo)'} away={awayMetrics.pace} home={homeMetrics.pace} icon={<Zap className="w-3 h-3" />} higherIsBetter={true} />
+            <MetricRow label={sport === 'ICE_HOCKEY' ? 'Shooting %' : 'eFG%'} away={awayMetrics.eFGPercentage} home={homeMetrics.eFGPercentage} icon={<TrendingUp className="w-3 h-3" />} higherIsBetter />
           </div>
         </div>
       )}

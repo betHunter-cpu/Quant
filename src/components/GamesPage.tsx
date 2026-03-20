@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { PronosticsPage } from './PronosticsPage';
 import { BasketballService, MatchData } from '../services/basketballService';
+import { IceHockeyService } from '../services/iceHockeyService';
 import { Activity, Gift, Bell, User, LayoutGrid, TrendingUp, BrainCircuit, BarChart3 } from 'lucide-react';
 
 type Sport = 'NBA' | 'NCAA' | 'MLB' | 'NHL' | 'NFL' | 'Football';
@@ -41,13 +42,22 @@ export function GamesPage({ onNavigateProfile }: { onNavigateProfile: () => void
   const [loading, setLoading] = useState(true);
   const [selectedMatch, setSelectedMatch] = useState<MatchData | null>(null);
 
+  const getSportType = (sport: Sport): 'BASKETBALL' | 'ICE_HOCKEY' => {
+    if (sport === 'NHL') return 'ICE_HOCKEY';
+    return 'BASKETBALL';
+  };
+
   useEffect(() => {
     async function loadMatches() {
       setLoading(true);
       try {
         const today = new Date();
         const dateToFetch = timeFilter === 'Today' ? today : new Date(today.setDate(today.getDate() + 1));
-        const data = await BasketballService.getMatchesByDate(dateToFetch.getDate(), dateToFetch.getMonth() + 1, dateToFetch.getFullYear());
+        
+        const sportType = getSportType(selectedSport);
+        const Service = sportType === 'ICE_HOCKEY' ? IceHockeyService : BasketballService;
+        
+        const data = await Service.getMatchesByDate(dateToFetch.getDate(), dateToFetch.getMonth() + 1, dateToFetch.getFullYear());
         
         const filtered = (Array.isArray(data) ? data : []).filter(m => 
           m.tournamentName.toUpperCase().includes(selectedSport)
@@ -64,10 +74,13 @@ export function GamesPage({ onNavigateProfile }: { onNavigateProfile: () => void
 
   // Live matches polling
   useEffect(() => {
-    if (selectedSport !== 'NBA' || timeFilter !== 'Today') return;
+    if (timeFilter !== 'Today') return;
+    if (selectedSport !== 'NBA' && selectedSport !== 'NHL') return;
 
     async function loadLiveMatches() {
-      const live = await BasketballService.getLiveMatches();
+      const sportType = getSportType(selectedSport);
+      const Service = sportType === 'ICE_HOCKEY' ? IceHockeyService : BasketballService;
+      const live = await Service.getLiveMatches();
       setLiveMatches(live);
     }
 
@@ -77,7 +90,13 @@ export function GamesPage({ onNavigateProfile }: { onNavigateProfile: () => void
   }, [selectedSport, timeFilter]);
 
   if (selectedMatch) {
-    return <PronosticsPage match={selectedMatch} onBack={() => setSelectedMatch(null)} />;
+    return (
+      <PronosticsPage 
+        match={selectedMatch} 
+        onBack={() => setSelectedMatch(null)} 
+        sport={getSportType(selectedSport)}
+      />
+    );
   }
 
   return (

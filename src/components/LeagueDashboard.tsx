@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { MatchData, BasketballService, BettingOdds } from '../services/basketballService';
-import { ForecastingEngine, SimulationResult, TeamMetrics } from '../services/forecastingEngine';
+import { NBABasketballEngine } from '../services/nbaEngine';
+import { NCAABasketballEngine } from '../services/ncaaEngine';
+import { SimulationResult, TeamMetrics } from '../types/forecasting';
 import { Activity, ServerCrash } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { AnalysisPanel } from './AnalysisPanel';
@@ -46,7 +48,8 @@ export function LeagueDashboard({ title, matches }: { title: string, matches: Ma
       setStatistics(matchStats);
 
       setTimeout(() => {
-        const result = ForecastingEngine.runMonteCarlo(homeStats, awayStats, 10000, {
+        const Engine = selectedMatch.tournamentName?.toLowerCase().includes('ncaa') ? NCAABasketballEngine : NBABasketballEngine;
+        const result = Engine.runMonteCarlo(homeStats, awayStats, 10000, {
           spread: matchOdds?.spread?.line,
           total: matchOdds?.totals?.line
         });

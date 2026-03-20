@@ -1,5 +1,5 @@
 import { BASKETBALL_ENDPOINTS } from './apiEndpoints';
-import { TeamMetrics } from './forecastingEngine';
+import { TeamMetrics } from '../types/forecasting';
 
 export interface TeamStats {
   pointsScored: number;
@@ -118,7 +118,7 @@ export class BasketballService {
           const homeId = event.homeTeam?.id || event.home_team?.id;
           const awayId = event.awayTeam?.id || event.away_team?.id;
           const tournamentName = event.tournament?.name || event.league?.name || '';
-          const isNBAorNCAA = tournamentName.includes('NBA') || tournamentName.includes('NCAA');
+          const isNBAorNCAA = (tournamentName.includes('NBA') && !tournamentName.toUpperCase().includes('G LEAGUE')) || tournamentName.includes('NCAA');
           return event.id && homeId && awayId && isNBAorNCAA;
         }) // Filter out events without an ID or missing team IDs, and enforce NBA/NCAA only
         .map((event: any) => {

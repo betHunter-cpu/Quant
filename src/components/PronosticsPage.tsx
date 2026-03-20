@@ -4,8 +4,8 @@ import { AnalysisPanel } from './AnalysisPanel';
 import { useMatchAnalysis } from '../hooks/useMatchAnalysis';
 import { Activity, ServerCrash } from 'lucide-react';
 
-export function PronosticsPage({ match, onBack }: { match: MatchData, onBack: () => void }) {
-  const { simulating, forecast, odds, homeMetrics, awayMetrics, statistics, apiError } = useMatchAnalysis(match);
+export function PronosticsPage({ match, onBack, sport = 'BASKETBALL' }: { match: MatchData, onBack: () => void, sport?: 'BASKETBALL' | 'ICE_HOCKEY' }) {
+  const { simulating, forecast, odds, homeMetrics, awayMetrics, statistics, apiError } = useMatchAnalysis(match, sport);
 
   const calculateImpliedProb = (decimalOdd: number) => {
     if (!decimalOdd || decimalOdd <= 0) return 0;
@@ -44,6 +44,7 @@ export function PronosticsPage({ match, onBack }: { match: MatchData, onBack: ()
           statistics={statistics}
           calculateImpliedProb={calculateImpliedProb}
           calculateEdge={calculateEdge}
+          sport={sport}
         />
       )}
     </div>

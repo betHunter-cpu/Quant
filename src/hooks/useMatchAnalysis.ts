@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react';
 import { MatchData, BasketballService, BettingOdds } from '../services/basketballService';
-import { ForecastingEngine, SimulationResult, TeamMetrics } from '../services/forecastingEngine';
+import { IceHockeyService } from '../services/iceHockeyService';
+import { NBABasketballEngine } from '../services/nbaEngine';
+import { NCAABasketballEngine } from '../services/ncaaEngine';
+import { HockeyEngine } from '../services/hockeyEngine';
+import { MLBEngine } from '../services/mlbEngine';
+import { SimulationResult, TeamMetrics } from '../types/forecasting';
 
-export function useMatchAnalysis(match: MatchData | null) {
+export function useMatchAnalysis(match: MatchData | null, sport: 'BASKETBALL' | 'ICE_HOCKEY' | 'BASEBALL' = 'BASKETBALL') {
   const [simulating, setSimulating] = useState(false);
   const [homeMetrics, setHomeMetrics] = useState<TeamMetrics | null>(null);
   const [awayMetrics, setAwayMetrics] = useState<TeamMetrics | null>(null);
@@ -27,10 +32,26 @@ export function useMatchAnalysis(match: MatchData | null) {
       setApiError(null);
       
       try {
-        const homeStats = await BasketballService.getAdvancedMetrics(match.homeTeam.id, match.homeTeam.name, match.tournamentId, match.seasonId);
-        const awayStats = await BasketballService.getAdvancedMetrics(match.awayTeam.id, match.awayTeam.name, match.tournamentId, match.seasonId);
-        const matchOdds = await BasketballService.getMatchOdds(match.id);
-        const matchStats = await BasketballService.getMatchStatistics(match.id);
+        const Service = sport === 'ICE_HOCKEY' ? IceHockeyService : BasketballService;
+        
+        let Engine;
+        if (sport === 'ICE_HOCKEY') {
+          Engine = HockeyEngine;
+        } else if (sport === 'BASEBALL') {
+          Engine = MLBEngine;
+        } else {
+          // Distinguish NBA and NCAA
+          if (match.tournamentName?.toLowerCase().includes('ncaa')) {
+            Engine = NCAABasketballEngine;
+          } else {
+            Engine = NBABasketballEngine;
+          }
+        }
+        
+        const homeStats = await Service.getAdvancedMetrics(match.homeTeam.id, match.homeTeam.name, match.tournamentId, match.seasonId);
+        const awayStats = await Service.getAdvancedMetrics(match.awayTeam.id, match.awayTeam.name, match.tournamentId, match.seasonId);
+        const matchOdds = await Service.getMatchOdds(match.id);
+        const matchStats = await Service.getMatchStatistics(match.id);
         
         if (!homeStats || !awayStats) {
           setApiError(`No hay suficientes datos estadísticos disponibles para realizar el análisis de este partido. Home: ${homeStats ? 'OK' : 'FAIL'}, Away: ${awayStats ? 'OK' : 'FAIL'}`);
@@ -44,7 +65,7 @@ export function useMatchAnalysis(match: MatchData | null) {
         setStatistics(matchStats);
 
         setTimeout(() => {
-          const result = ForecastingEngine.runMonteCarlo(homeStats, awayStats, 10000, {
+          const result = Engine.runMonteCarlo(homeStats, awayStats, 10000, {
             spread: matchOdds?.spread?.line,
             total: matchOdds?.totals?.line
           });
@@ -60,7 +81,7 @@ export function useMatchAnalysis(match: MatchData | null) {
       }
     }
     loadAnalysis();
-  }, [match]);
+  }, [match, sport]);
 
   return { simulating, forecast, odds, homeMetrics, awayMetrics, statistics, apiError };
 }
